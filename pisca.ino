@@ -1,80 +1,62 @@
-#ifndef PISCA_INO
-#define PISCA_INO
-
-#include <string.h>
-
-//bluetooth
-#ifdef ESP
-	//código para modulo esp nativo
-	#include "BluetoothSerial.h"
-	#if !defined(CONFIG_BT_ENABLED) || !defined(CONFIG_BLUEDROID_ENABLED)
-		#error Bluetooth is not enabled! Please run `make menuconfig` to and enable it
-	#endif
-
-	BluetoothSerial SerialBT;
-	
-	#define BT_begin() SerialBT.begin("MODULO-BT IOT!")
-	#define BT_available() SerialBT.available()
-	#define BT_read() SerialBT.read()
-	#define BT_write(x) SerialBT.write(x)
-#else
-	//#include <SoftwareSerial.h>
-
-	SoftwareSerial hc06(BT_RX, BT_TX);
-
-	#define BT_available() hc06.available()
-	#define BT_write(x) SerialBT.write(x)
-	#define BT_read() SerialBT.read()
-	#define BT_begin(x); hc06.begin(9600);\
-		{char *txt;\
-			sprintf(txt,"AT+NAME%s",x);\
-			while(1){\
-				if(BT_available()){\
-					BT_write(txt);\
-					break;\
-				}\
-				else delay(1);\
-			}\
-		}
-#endif
-
-#include <SPI.h>
-//#include <LoRa.h>
+#include "import.h"
 
 
 
-#include "constantes.h"
-#include "funcoes.h"
-
-#include <stdlib.h>
-#include<time.h>
 
 
+static bool doConnect = false;
+static bool connected = false;
+static bool doScan = false;
+static BLERemoteCharacteristic* pRemoteCharacteristic;
+static BLEAdvertisedDevice* myDevice;
+static DipositivoClienteBLE* dispositivo;
+
+static void notifyCallback(
+  BLERemoteCharacteristic* pBLERemoteCharacteristic,
+  uint8_t* pData,
+  size_t length,
+  bool isNotify) {
+    Serial.print("Notify callback for characteristic ");
+    Serial.print(pBLERemoteCharacteristic->getUUID().toString().c_str());
+    Serial.print(" of data length ");
+    Serial.println(length);
+    Serial.print("data: ");
+    Serial.println((char*)pData);
+}
 
 void setup() {
-	randomSeed(analogRead(5))
-	BT_begin("MODULO-BT IOT!");
-	if (!LoRa.begin(915E6)) {
-		Serial.println("Starting LoRa failed!");
-		while (1);
-	}
-}
-void loop() {
-	#if SERVIDOR == 1
-		#if BLUETOOTH == 1
-			BlueToothServer();
-		#endif
-		#if LORA == 1
-			LoraServer();
-		#endif
-	#else
-		#if BLUETOOTH == 1
-			BlueToothClient();
-		#endif
-		#if LORA == 1
-			LoraClient();
-		#endif
-	#endif
-}
+	Serial.begin(115200);
+	Serial.println("Vai te foder");
+ 	dispositivo = new DipositivoClienteBLE("Meu bt personalizado",true);
 
-#endif
+} // End of setup.
+
+void loop() {
+	dispositivo->run();
+  /*// If the flag "doConnect" is true then we have scanned for and found the desired
+  // BLE Server with which we wish to connect.  Now we connect to it.  Once we are 
+  // connected we set the connected flag to be true.
+  if (doConnect == true) {
+    if (connectToServer()) {
+      Serial.println("We are now connected to the BLE Server.");
+    } else {
+      Serial.println("We have failed to connect to the server; there is nothin more we will do.");
+    }
+    doConnect = false;
+  }
+
+  // If we are connected to a peer BLE Server, update the characteristic each time we are reached
+  // with the current time since boot.
+  if (connected) {
+    String newValue = "Time since boot: " + String(millis()/1000);
+    Serial.println("Setting new characteristic value to \"" + newValue + "\"");
+    
+    // Set the characteristic's value to be the array of bytes that is actually a string.
+    pRemoteCharacteristic->writeValue(newValue.c_str(), newValue.length());
+  }else if(doScan){
+    BLEDevice::getScan()->start(0);  // this is just example to start scan after disconnect, most likely there is better way to do it in arduino
+  }
+  
+  delay(1000); // Delay a second between loops.
+  */
+} // End of loop
